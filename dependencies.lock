@@ -1,0 +1,51 @@
+dependencies:
+  espressif/cmake_utilities:
+    component_hash: c3f351bed6fdb3d91bee6076740cb13d22e2c7bfcdd78969a65b46943885bbd4
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 0.5.2
+  espressif/esp_lcd_touch:
+    component_hash: 6cc76832cda51d73353a7e8d7aa07073d6cdb75b1ad66e2d98badd768f6c830a
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.1.0
+  espressif/esp_lcd_touch_stmpe610:
+    component_hash: 0f5f7fb50c2d716e72c2729725e4f96232a594d4b36036d6faa74e66e24d2ac9
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.0.6
+  espressif/esp_lcd_touch_tt21100:
+    component_hash: 3670f6f3d68c120d680d70ffdf2dc10f6c2a5bea8c0e87521fb92ac2af1f94c5
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.1.0
+  espressif__esp_lcd_gc9a01:
+    component_hash: null
+    source:
+      path: D:\esp32_projektek\spi_lcd_touch\components\espressif__esp_lcd_gc9a01
+      type: local
+    version: 1.1.0
+  espressif__esp_lcd_ili9341:
+    component_hash: null
+    source:
+      path: D:\esp32_projektek\spi_lcd_touch\components\espressif__esp_lcd_ili9341
+      type: local
+    version: 1.1.0
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.1.1
+  lvgl/lvgl:
+    component_hash: 51022b16bce6ee90f54a8bd21cd6d497d886916899b577b1bebb9125b91e23fc
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 8.3.10
+manifest_hash: ed9016471fd49aca9df04800b6d840356fb337deef0147dba3f71db72794802a
+target: esp32s3
+version: 1.0.0
