@@ -1,7 +1,7 @@
 {
     "version":            "1",
     "project_name":       "spi_lcd_touch",
-    "project_version":    "1",
+    "project_version":    "50db067-dirty",
     "project_path":       "D:/esp32_projektek/spi_lcd_touch",
     "idf_path":           "D:/ZOROBE/esp32_projektek/esp_idf/esp-idf",
     "build_dir":          "D:/esp32_projektek/spi_lcd_touch/build",
