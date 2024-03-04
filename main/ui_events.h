@@ -20,10 +20,14 @@ void Ch7Pressed(lv_event_t * e);
 void Ch8Pressed(lv_event_t * e);
 void micValueChanged(lv_event_t * e);
 void refValueChanged(lv_event_t * e);
-void bypassValueChanged(lv_event_t * e);
 void outValueChanged(lv_event_t * e);
+void bypassValueChanged(lv_event_t * e);
 void applyToAllChanPressed(lv_event_t * e);
 void backButtonPressed(lv_event_t * e);
+void goToCanSettings(lv_event_t * e);
+void canAddChanged(lv_event_t * e);
+void backToSettings(lv_event_t * e);
+void changeToLogger(lv_event_t * e);
 
 #ifdef __cplusplus
 } /*extern "C"*/

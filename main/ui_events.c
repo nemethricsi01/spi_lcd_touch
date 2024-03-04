@@ -5,72 +5,97 @@
 
 #include "ui.h"
 
-// void Ch1Pressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void Ch1Pressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void applyToAllChanPressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void applyToAllChanPressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void backButtonPressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void backButtonPressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void micValueChanged(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void micValueChanged(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void Ch2Pressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void Ch2Pressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void Ch3Pressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void Ch3Pressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void Ch4Pressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void Ch4Pressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void Ch5Pressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void Ch5Pressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void Ch6Pressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void Ch6Pressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void Ch7Pressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void Ch7Pressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void Ch8Pressed(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void Ch8Pressed(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void refValueChanged(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void refValueChanged(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void bypassValueChanged(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void bypassValueChanged(lv_event_t * e)
+{
+	// Your code here
+}
 
-// void outValueChanged(lv_event_t * e)
-// {
-// 	// Your code here
-// }
+void outValueChanged(lv_event_t * e)
+{
+	// Your code here
+}
+
+void CanAddrValueChanged(lv_event_t * e)
+{
+	// Your code here
+}
+
+void canAddChanged(lv_event_t * e)
+{
+	// Your code here
+}
+
+void backToSettings(lv_event_t * e)
+{
+	// Your code here
+}
+
+void goToCanSettings(lv_event_t * e)
+{
+	// Your code here
+}
+
+void changeToLogger(lv_event_t * e)
+{
+	// Your code here
+}

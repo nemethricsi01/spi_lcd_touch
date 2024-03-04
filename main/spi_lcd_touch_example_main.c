@@ -7,12 +7,7 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_timer.h"
-#include "esp_lcd_panel_io.h"
-#include "esp_lcd_panel_vendor.h"
-#include "esp_lcd_panel_ops.h"
-#include "driver/gpio.h"
-#include "driver/spi_master.h"
+
 #include "esp_err.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -20,44 +15,56 @@
 #include "ui.h"
 #include <math.h>
 #include "potik/poti.h"
-#define CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS 1
+#include "lvgl_stuff/lvgl_init.h"
+#include "driver/twai.h"
+#include "can_task/can_task.h"
+
+
+uint8_t mapLinearToLogarithmic(uint16_t input) {
+    if (input == 0) {
+        return 0;  // Avoid log(0), output 0
+    }
+    
+    double log_output = log(input + 1) * (170.0 / log(32769));
+    if(log_output < 85)
+    {
+        log_output = 0;
+    }
+    if( log_output >85)
+    {
+        log_output = (log_output - 85)*2;
+    }
+    return (uint8_t)log_output;
+}
+static esp_err_t i2c_master_init(void)
+{
+    int i2c_master_port = 1;
+
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = 48,
+        .scl_io_num = 21,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 200*1000,
+    };
+
+    i2c_param_config(i2c_master_port, &conf);
+
+    return i2c_driver_install(i2c_master_port, conf.mode, 0, 0, 0);
+}
+
+void reset_stm32(void)
+{
+
+}
 
 
 
-#include "esp_lcd_ili9341.h"
-#include "esp_lcd_touch_tt21100.h"
 
 static const char *TAG = "example";
 
-// Using SPI2 in the example
-#define LCD_HOST  SPI2_HOST
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (60 * 1000 * 1000)
-#define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
-#define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
-#define EXAMPLE_PIN_NUM_SCLK           18
-#define EXAMPLE_PIN_NUM_MOSI           47
-#define EXAMPLE_PIN_NUM_MISO           21
-#define EXAMPLE_PIN_NUM_LCD_DC         5
-#define EXAMPLE_PIN_NUM_LCD_RST        3
-#define EXAMPLE_PIN_NUM_LCD_CS         4
-#define EXAMPLE_PIN_NUM_BK_LIGHT       2
-
-// The pixel number in horizontal and vertical
-#define EXAMPLE_LCD_H_RES              320
-#define EXAMPLE_LCD_V_RES              240
-
-// Bit number used to represent command and parameter
-#define EXAMPLE_LCD_CMD_BITS           8
-#define EXAMPLE_LCD_PARAM_BITS         8
-
-#define EXAMPLE_LVGL_TICK_PERIOD_MS    2
-
-esp_lcd_touch_handle_t tp = NULL;
-esp_lcd_touch_handle_t button = NULL;
 
 int8_t digitPotiVals[41] = 
 {
@@ -73,6 +80,7 @@ int8_t digitPotiVals[41] =
 
 SemaphoreHandle_t lvgl_sem;
 SemaphoreHandle_t i2c_sem;
+SemaphoreHandle_t buttonSemaphore;
 
 
 typedef enum {
@@ -163,35 +171,50 @@ void init_Bar_Array(void)
     MainScreenBars[4] = ui_Bar5;
     MainScreenBars[5] = ui_Bar6;
     MainScreenBars[6] = ui_Bar7;
-    MainScreenBars[7] = ui_Bar13;
-    MainScreenBars[8] = ui_Bar14;
-    MainScreenBars[9] = ui_Bar9;
-    MainScreenBars[10] = ui_Bar15;
-    MainScreenBars[11] = ui_Bar16;
-    MainScreenBars[12] = ui_Bar8;
-    MainScreenBars[13] = ui_Bar17;
-    MainScreenBars[14] = ui_Bar18;
-    MainScreenBars[15] = ui_Bar10;
-    MainScreenBars[16] = ui_Bar19;
-    MainScreenBars[17] = ui_Bar20;
-    MainScreenBars[18] = ui_Bar11;
-    MainScreenBars[19] = ui_Bar21;
-    MainScreenBars[20] = ui_Bar22;
-    MainScreenBars[21] = ui_Bar12;
+    MainScreenBars[7] = ui_Bar8;
+    MainScreenBars[8] = ui_Bar9;
+    MainScreenBars[9] = ui_Bar10;
+    MainScreenBars[10] = ui_Bar11;
+    MainScreenBars[11] = ui_Bar12;
+    MainScreenBars[12] = ui_Bar13;
+    MainScreenBars[13] = ui_Bar14;
+    MainScreenBars[14] = ui_Bar15;
+    MainScreenBars[15] = ui_Bar16;
+    MainScreenBars[16] = ui_Bar17;
+    MainScreenBars[17] = ui_Bar18;
+    MainScreenBars[18] = ui_Bar19;
+    MainScreenBars[19] = ui_Bar20;
+    MainScreenBars[20] = ui_Bar21;
+    MainScreenBars[21] = ui_Bar22;
     MainScreenBars[22] = ui_Bar23;
     MainScreenBars[23] = ui_Bar24;
 }
 
-
+void changeToLogger(lv_event_t * e)
+{
+	_ui_screen_change(&ui_Screen5,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen5_screen_init);
+}
+void canAddChanged(lv_event_t * e)
+{
+	// Your code here
+}
+void backToSettings(lv_event_t * e)
+{
+	_ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
+}
+void goToCanSettings(lv_event_t * e)
+{
+	_ui_screen_change(&ui_Screen4,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen4_screen_init);
+}
 void Ch1Pressed(lv_event_t * e)
 {
 	// Your code here
     //lv_obj_clean(lv_scr_act());
     channelState.lastPress = CHANNEL_1;
-    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[CH_1]),LV_ANIM_ON);
-    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[CH_1]),LV_ANIM_ON);
-    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[CH_1]),LV_ANIM_ON);
-    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[CH_1]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
@@ -200,10 +223,10 @@ void Ch2Pressed(lv_event_t * e)
 	// Your code here
     //lv_obj_clean(lv_scr_act());
     channelState.lastPress = CHANNEL_2;
-    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[CH_2]),LV_ANIM_ON);
-    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[CH_2]),LV_ANIM_ON);
-    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[CH_2]),LV_ANIM_ON);
-    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[CH_2]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
 
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
@@ -212,6 +235,10 @@ void Ch3Pressed(lv_event_t * e)
 	// Your code here
     //lv_obj_clean(lv_scr_act());
     channelState.lastPress = CHANNEL_3;
+    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch4Pressed(lv_event_t * e)
@@ -219,6 +246,10 @@ void Ch4Pressed(lv_event_t * e)
 	// Your code here
     //lv_obj_clean(lv_scr_act());
     channelState.lastPress = CHANNEL_4;
+    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch5Pressed(lv_event_t * e)
@@ -226,6 +257,10 @@ void Ch5Pressed(lv_event_t * e)
 	// Your code here
     //lv_obj_clean(lv_scr_act());
     channelState.lastPress = CHANNEL_5;
+    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch6Pressed(lv_event_t * e)
@@ -233,6 +268,10 @@ void Ch6Pressed(lv_event_t * e)
 	// Your code here
     //lv_obj_clean(lv_scr_act());
     channelState.lastPress = CHANNEL_6;
+    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch7Pressed(lv_event_t * e)
@@ -240,6 +279,10 @@ void Ch7Pressed(lv_event_t * e)
 	// Your code here
     //lv_obj_clean(lv_scr_act());
     channelState.lastPress = CHANNEL_7;
+    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch8Pressed(lv_event_t * e)
@@ -247,6 +290,10 @@ void Ch8Pressed(lv_event_t * e)
 	// Your code here
     //lv_obj_clean(lv_scr_act());
     channelState.lastPress = CHANNEL_8;
+    lv_slider_set_value(ui_Slider2,Channel_getMicVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 
@@ -281,7 +328,7 @@ void bypassValueChanged(lv_event_t * e)
 	lv_obj_t *slider = lv_event_get_target(e);
     uint8_t val = (uint8_t)lv_slider_get_value(slider);
     uint8_t mappedVal = (uint8_t)((float)val/101.0*41.0);//this maps the values to match the amplitude
-    lv_label_set_text_fmt(ui_Label19,"%d\ndB",digitPotiVals[40-mappedVal]);
+    lv_label_set_text_fmt(ui_Label18,"%d\ndB",digitPotiVals[40-mappedVal]);
     Channel_setByPassVal(&channelArray[channelState.lastPress],val);
     ESP_LOGI("lvgl:","bypass slider val: %d",val);
 }
@@ -291,7 +338,7 @@ void outValueChanged(lv_event_t * e)
 	lv_obj_t *slider = lv_event_get_target(e);
     uint8_t val = (uint8_t)lv_slider_get_value(slider);
     uint8_t mappedVal = (uint8_t)((float)val/101.0*41.0);//this maps the values to match the amplitude
-    lv_label_set_text_fmt(ui_Label18,"%d\ndB",digitPotiVals[40-mappedVal]);
+    lv_label_set_text_fmt(ui_Label19,"%d\ndB",digitPotiVals[40-mappedVal]);
     Channel_setKiVal(&channelArray[channelState.lastPress],val);
     ESP_LOGI("lvgl:","out slider val: %d\ndB",val);
 }
@@ -305,97 +352,26 @@ void micValueChanged(lv_event_t *e)
     ESP_LOGI("lvgl:","mic slider val: %d, mappedval: %d",val,mappedVal);
 }
 
-static bool example_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
-{
-    lv_disp_drv_t *disp_driver = (lv_disp_drv_t *)user_ctx;
-    lv_disp_flush_ready(disp_driver);
-    return false;
-}
-
-static void example_lvgl_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
-{
-    esp_lcd_panel_handle_t panel_handle = (esp_lcd_panel_handle_t) drv->user_data;
-    int offsetx1 = area->x1;
-    int offsetx2 = area->x2;
-    int offsety1 = area->y1;
-    int offsety2 = area->y2;
-    // copy a buffer's content to a specific area of the display
-    esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
-}
-
-/* Rotate display and touch, when rotated screen in LVGL. Called when driver parameters are updated. */
-static void example_lvgl_port_update_callback(lv_disp_drv_t *drv)
-{
-    
-}
 
 
-static void example_lvgl_touch_cb(lv_indev_drv_t * drv, lv_indev_data_t * data)
-{
-    uint16_t touchpad_x[1] = {0};
-    uint16_t touchpad_y[1] = {0};
-    uint8_t touchpad_cnt = 0;
-    uint8_t points = 0;
-    uint8_t butt;
 
-    /* Read touch controller data */
-    ESP_ERROR_CHECK(esp_lcd_touch_read_data(drv->user_data));
-    
-    
 
-    /* Get coordinates */
-    bool touchpad_pressed = esp_lcd_touch_get_coordinates(drv->user_data, touchpad_x, touchpad_y, NULL, &touchpad_cnt, 1);
-    esp_lcd_touch_get_button_state(drv->user_data,points,&butt);
-    //ESP_LOGI("ricsi","pressed,x:%d,y:%d points: %d",touchpad_x[0],touchpad_y[0],butt);
 
-    if (touchpad_pressed && touchpad_cnt > 0) {
-        data->point.x = touchpad_x[0];
-        data->point.y = touchpad_y[0];
-        data->state = LV_INDEV_STATE_PRESSED;
-    } else {
-        data->state = LV_INDEV_STATE_RELEASED;
-    }
-}
 
-static void example_increase_lvgl_tick(void *arg)
-{
-    /* Tell LVGL how many milliseconds has elapsed */
-    lv_tick_inc(EXAMPLE_LVGL_TICK_PERIOD_MS);
-}
-static esp_err_t i2c_master_init(void)
-{
-    int i2c_master_port = 1;
-
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = 48,
-        .scl_io_num = 21,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = 200*1000,
-    };
-
-    i2c_param_config(i2c_master_port, &conf);
-
-    return i2c_driver_install(i2c_master_port, conf.mode, 0, 0, 0);
-}
-uint8_t mapLinearToLogarithmic(uint16_t input) {
-    if (input == 0) {
-        return 0;  // Avoid log(0), output 0
-    }
-    
-    double log_output = log(input + 1) * (170.0 / log(32769));
-    if(log_output < 85)
-    {
-        log_output = 0;
-    }
-    if( log_output >85)
-    {
-        log_output = (log_output - 85)*2;
-    }
-    return (uint8_t)log_output;
-}
-
+// static void twai_receive_task(void *arg)
+// {
+//     xSemaphoreTake(rx_sem, portMAX_DELAY);
+//     bool start_cmd = false;
+//     bool stop_resp = false;
+//     uint32_t iterations = 0;
+//     twai_message_t rx_msg;
+//     while(1)
+//     {
+//         twai_receive(&rx_msg, portMAX_DELAY);
+//     ESP_LOGI(EXAMPLE_TAG, "Received message");
+//     ESP_LOG_BUFFER_HEX(EXAMPLE_TAG, &rx_msg, sizeof(rx_msg));
+//     }
+// }
 void i2c_read_task(void *pvParameter) {
     uint8_t data[16];
     uint8_t data2[16];
@@ -521,9 +497,28 @@ void i2c_write_task(void *pvParameter) {
     vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
+void gpio_toggle_task(void *pvParameter) {
+    
+    while (1) 
+    {
+        gpio_set_level(40,0);
+        vTaskDelay(pdMS_TO_TICKS(5));
+        gpio_set_level(40,1);
+    vTaskDelay(pdMS_TO_TICKS(5));
+    }
+}
 void app_main(void)
 
 {
+    gpio_config_t io_conf;
+    io_conf.pin_bit_mask = 1ULL<<40;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pull_up_en = 0;
+    io_conf.pull_down_en = 0;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&io_conf);
+    gpio_set_drive_capability(40,GPIO_DRIVE_CAP_1);
+    gpio_set_level(40,1);
 
     for(int i = 0;i<NUM_CHANNEL;i++)
     {
@@ -535,59 +530,7 @@ void app_main(void)
         channelArray[i].changed = false;
     }
     channelState.lastPress = CHANNEL_NONE;
-    static lv_disp_draw_buf_t disp_buf; // contains internal graphic buffer(s) called draw buffer(s)
-    static lv_disp_drv_t disp_drv;      // contains callback functions
-
-    ESP_LOGI(TAG, "Turn off LCD backlight");
-    gpio_config_t bk_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
-    };
-    ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-
-    ESP_LOGI(TAG, "Initialize SPI bus");
-    spi_bus_config_t buscfg = {
-        .sclk_io_num = EXAMPLE_PIN_NUM_SCLK,
-        .mosi_io_num = EXAMPLE_PIN_NUM_MOSI,
-        .miso_io_num = EXAMPLE_PIN_NUM_MISO,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t),
-    };
-    ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
-
-    ESP_LOGI(TAG, "Install panel IO");
-    esp_lcd_panel_io_handle_t io_handle = NULL;
-    esp_lcd_panel_io_spi_config_t io_config = {
-        .dc_gpio_num = EXAMPLE_PIN_NUM_LCD_DC,
-        .cs_gpio_num = EXAMPLE_PIN_NUM_LCD_CS,
-        .pclk_hz = EXAMPLE_LCD_PIXEL_CLOCK_HZ,
-        .lcd_cmd_bits = EXAMPLE_LCD_CMD_BITS,
-        .lcd_param_bits = EXAMPLE_LCD_PARAM_BITS,
-        .spi_mode = 0,
-        .trans_queue_depth = 10,
-        .on_color_trans_done = example_notify_lvgl_flush_ready,
-        .user_ctx = &disp_drv,
-    };
-    // Attach the LCD to the SPI bus
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_HOST, &io_config, &io_handle));
-
-    esp_lcd_panel_handle_t panel_handle = NULL;
-    esp_lcd_panel_dev_config_t panel_config = {
-        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_endian = LCD_RGB_ENDIAN_BGR,
-        .bits_per_pixel = 16,
-    };
-    ESP_LOGI(TAG, "Install ILI9341 panel driver");
-    ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(io_handle, &panel_config, &panel_handle));
-    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
-    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
-
-    // user can flush pre-defined pattern to the screen before we turn on the screen or backlight
-    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
-    esp_lcd_panel_io_handle_t tp_io_handle = NULL;
-        // Attach the TOUCH to the I2C bus
-    const i2c_config_t i2c_conf = {
+        const i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = 14,
         .scl_io_num = 13,
@@ -598,77 +541,12 @@ void app_main(void)
     /* Initialize I2C */
     ESP_ERROR_CHECK(i2c_param_config(0, &i2c_conf));
     ESP_ERROR_CHECK(i2c_driver_install(0, i2c_conf.mode, 0, 0, 0));
-    
-    esp_lcd_touch_config_t tp_cfg = {
-        .x_max = EXAMPLE_LCD_H_RES,
-        .y_max = EXAMPLE_LCD_V_RES,
-        .rst_gpio_num = -1,
-        .int_gpio_num = -1,
-        .levels = {
-            .reset = 0,
-            .interrupt = 0,
-        },
-        .flags = {
-            .swap_xy = 0,
-            .mirror_x = 1,
-            .mirror_y = 0,
-        },
-    };
-    esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_TT21100_CONFIG();
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)0, &tp_io_config, &tp_io_handle));
-    ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_tt21100(tp_io_handle, &tp_cfg, &tp));
-
-    ESP_LOGI(TAG, "Turn on LCD backlight");
-    gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
-
-    ESP_LOGI(TAG, "Initialize LVGL library");
-    lv_init();
-    // alloc draw buffers used by LVGL
-    // it's recommended to choose the size of the draw buffer(s) to be at least 1/10 screen sized
-    lv_color_t *buf1 = heap_caps_malloc(EXAMPLE_LCD_H_RES * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
-    assert(buf1);
-    lv_color_t *buf2 = heap_caps_malloc(EXAMPLE_LCD_H_RES * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
-    assert(buf2);
-    // initialize LVGL draw buffers
-    lv_disp_draw_buf_init(&disp_buf, buf1, buf2, EXAMPLE_LCD_H_RES * 20);
-
-    ESP_LOGI(TAG, "Register display driver to LVGL");
-    lv_disp_drv_init(&disp_drv);
-    disp_drv.hor_res = EXAMPLE_LCD_H_RES;
-    disp_drv.ver_res = EXAMPLE_LCD_V_RES;
-    disp_drv.flush_cb = example_lvgl_flush_cb;
-    disp_drv.drv_update_cb = example_lvgl_port_update_callback;
-    disp_drv.draw_buf = &disp_buf;
-    disp_drv.user_data = panel_handle;
-    lv_disp_t *disp = lv_disp_drv_register(&disp_drv);
-
-    ESP_LOGI(TAG, "Install LVGL tick timer");
-    // Tick interface for LVGL (using esp_timer to generate 2ms periodic event)
-    const esp_timer_create_args_t lvgl_tick_timer_args = {
-        .callback = &example_increase_lvgl_tick,
-        .name = "lvgl_tick"
-    };
-    esp_timer_handle_t lvgl_tick_timer = NULL;
-    ESP_ERROR_CHECK(esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000));
-
-
-    static lv_indev_drv_t indev_drv;    // Input device driver (Touch)
-    lv_indev_drv_init(&indev_drv);
-    indev_drv.type = LV_INDEV_TYPE_POINTER;
-    indev_drv.disp = disp;
-    indev_drv.read_cb = example_lvgl_touch_cb;
-    indev_drv.user_data = tp;
-
-    lv_indev_drv_register(&indev_drv);
-
-    ESP_LOGI(TAG, "Display LVGL Meter Widget");
-    esp_lcd_panel_swap_xy(panel_handle, false);
-    
-    esp_lcd_panel_mirror(panel_handle, true, true);
+    lvgl_init();
     //lv_example_bar_3();
     lvgl_sem =  xSemaphoreCreateBinary();
     i2c_sem = xSemaphoreCreateBinary();
+    buttonSemaphore = xSemaphoreCreateBinary();
+    xSemaphoreGive(buttonSemaphore);
     xSemaphoreGive(lvgl_sem);
     xSemaphoreGive(i2c_sem);
     ESP_ERROR_CHECK(i2c_master_init());
@@ -677,8 +555,12 @@ void app_main(void)
     vTaskDelay(pdMS_TO_TICKS(5000));
     xTaskCreate(&i2c_read_task,"i2c read slave",4096,NULL,5,NULL);
     xTaskCreate(&i2c_write_task,"i2c write slave",4096,NULL,5,NULL);
+    xTaskCreate(&gpio_toggle_task,"gpio_toggle",4096,NULL,5,NULL);
+    can_task_init();
     ui_init();
     init_Bar_Array();
+    size_t free_heap = esp_get_free_heap_size();
+    ESP_LOGI("Memory", "Free heap: %zu bytes", free_heap);
     while (1) {
         // raise the task priority of LVGL and/or reduce the handler period can improve the performance
         vTaskDelay(pdMS_TO_TICKS(10));
