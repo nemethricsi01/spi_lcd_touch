@@ -206,6 +206,14 @@ void goToCanSettings(lv_event_t * e)
 {
 	_ui_screen_change(&ui_Screen4,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen4_screen_init);
 }
+
+
+
+void handle_slider_value(lv_obj_t * slider, lv_obj_t * label, int8_t * digitPotiVals) {
+    uint8_t val = (uint8_t)lv_slider_get_value(slider);
+    uint8_t mappedVal = (uint8_t)((float)val/101.0*41.0); // this maps the values to match the amplitude
+    lv_label_set_text_fmt(label, "%d\ndB", digitPotiVals[40-mappedVal]);
+}
 void Ch1Pressed(lv_event_t * e)
 {
 	// Your code here
@@ -215,6 +223,10 @@ void Ch1Pressed(lv_event_t * e)
     lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+        handle_slider_value(ui_Slider2, ui_Label14, digitPotiVals);
+    handle_slider_value(ui_Slider1, ui_Label16, digitPotiVals);
+    handle_slider_value(ui_Slider4, ui_Label18, digitPotiVals);
+    handle_slider_value(ui_Slider3, ui_Label19, digitPotiVals);
     
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
@@ -227,6 +239,10 @@ void Ch2Pressed(lv_event_t * e)
     lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+        handle_slider_value(ui_Slider2, ui_Label14, digitPotiVals);
+    handle_slider_value(ui_Slider1, ui_Label16, digitPotiVals);
+    handle_slider_value(ui_Slider4, ui_Label18, digitPotiVals);
+    handle_slider_value(ui_Slider3, ui_Label19, digitPotiVals);
 
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
@@ -239,6 +255,10 @@ void Ch3Pressed(lv_event_t * e)
     lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+        handle_slider_value(ui_Slider2, ui_Label14, digitPotiVals);
+    handle_slider_value(ui_Slider1, ui_Label16, digitPotiVals);
+    handle_slider_value(ui_Slider4, ui_Label18, digitPotiVals);
+    handle_slider_value(ui_Slider3, ui_Label19, digitPotiVals);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch4Pressed(lv_event_t * e)
@@ -250,6 +270,10 @@ void Ch4Pressed(lv_event_t * e)
     lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+        handle_slider_value(ui_Slider2, ui_Label14, digitPotiVals);
+    handle_slider_value(ui_Slider1, ui_Label16, digitPotiVals);
+    handle_slider_value(ui_Slider4, ui_Label18, digitPotiVals);
+    handle_slider_value(ui_Slider3, ui_Label19, digitPotiVals);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch5Pressed(lv_event_t * e)
@@ -261,6 +285,10 @@ void Ch5Pressed(lv_event_t * e)
     lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+        handle_slider_value(ui_Slider2, ui_Label14, digitPotiVals);
+    handle_slider_value(ui_Slider1, ui_Label16, digitPotiVals);
+    handle_slider_value(ui_Slider4, ui_Label18, digitPotiVals);
+    handle_slider_value(ui_Slider3, ui_Label19, digitPotiVals);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch6Pressed(lv_event_t * e)
@@ -272,6 +300,23 @@ void Ch6Pressed(lv_event_t * e)
     lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+    handle_slider_value(ui_Slider2, ui_Label14, digitPotiVals);
+    handle_slider_value(ui_Slider1, ui_Label16, digitPotiVals);
+    handle_slider_value(ui_Slider4, ui_Label18, digitPotiVals);
+    handle_slider_value(ui_Slider3, ui_Label19, digitPotiVals);
+    // uint8_t val = (uint8_t)lv_slider_get_value(ui_Slider2);
+    // uint8_t mappedVal = (uint8_t)((float)val/101.0*41.0);//this maps the values to match the amplitude
+    // lv_label_set_text_fmt(ui_Label14,"%d\ndB",digitPotiVals[40-mappedVal]);
+    // val = (uint8_t)lv_slider_get_value(ui_Slider1);
+    // mappedVal = (uint8_t)((float)val/101.0*41.0);//this maps the values to match the amplitude
+    // lv_label_set_text_fmt(ui_Label16,"%d\ndB",digitPotiVals[40-mappedVal]);
+    // val = (uint8_t)lv_slider_get_value(ui_Slider3);
+    // mappedVal = (uint8_t)((float)val/101.0*41.0);//this maps the values to match the amplitude
+    // lv_label_set_text_fmt(ui_Label18,"%d\ndB",digitPotiVals[40-mappedVal]);
+    // val = (uint8_t)lv_slider_get_value(ui_Slider4);
+    // mappedVal = (uint8_t)((float)val/101.0*41.0);//this maps the values to match the amplitude
+    // lv_label_set_text_fmt(ui_Label19,"%d\ndB",digitPotiVals[40-mappedVal]);
+
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch7Pressed(lv_event_t * e)
@@ -283,6 +328,10 @@ void Ch7Pressed(lv_event_t * e)
     lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+        handle_slider_value(ui_Slider2, ui_Label14, digitPotiVals);
+    handle_slider_value(ui_Slider1, ui_Label16, digitPotiVals);
+    handle_slider_value(ui_Slider4, ui_Label18, digitPotiVals);
+    handle_slider_value(ui_Slider3, ui_Label19, digitPotiVals);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 void Ch8Pressed(lv_event_t * e)
@@ -294,6 +343,10 @@ void Ch8Pressed(lv_event_t * e)
     lv_slider_set_value(ui_Slider1,Channel_getRefVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider3,Channel_getByPassVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
     lv_slider_set_value(ui_Slider4,Channel_getKiVal(channelArray[channelState.lastPress]),LV_ANIM_ON);
+        handle_slider_value(ui_Slider2, ui_Label14, digitPotiVals);
+    handle_slider_value(ui_Slider1, ui_Label16, digitPotiVals);
+    handle_slider_value(ui_Slider4, ui_Label18, digitPotiVals);
+    handle_slider_value(ui_Slider3, ui_Label19, digitPotiVals);
     _ui_screen_change(&ui_Screen2,LV_SCR_LOAD_ANIM_NONE,0,0,&ui_Screen2_screen_init);
 }
 

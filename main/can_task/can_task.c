@@ -951,9 +951,6 @@ void format_can_message4byte(const CanMessage* message, char* buffer,int16_t com
             handle_led_layer(buffer, message->sequenceNumber, hours, minutes, seconds, message->data, message->timestamp, "REMLEDL170-181");
             break;
         }
-
-    
-    
     }
     
 }
